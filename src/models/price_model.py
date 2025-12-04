@@ -10,11 +10,19 @@ from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
-import lightgbm as lgb
 import pickle
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 import logging
+
+# Optional LightGBM import
+try:
+    import lightgbm as lgb
+    HAS_LIGHTGBM = True
+except ImportError:
+    HAS_LIGHTGBM = False
+    logger = logging.getLogger(__name__)
+    logger.warning("LightGBM not installed. Install with: pip install lightgbm")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,6 +49,8 @@ class PriceModel:
             self.model = LinearRegression()
         
         elif self.model_type == 'lightgbm':
+            if not HAS_LIGHTGBM:
+                raise ImportError("LightGBM not installed. Install with: pip install lightgbm")
             default_params = {
                 'objective': 'regression',
                 'metric': 'rmse',
@@ -102,7 +112,7 @@ class PriceModel:
         self._create_model(params)
         
         # Train model
-        if self.model_type == 'lightgbm' and X_val is not None and y_val is not None:
+        if self.model_type == 'lightgbm' and HAS_LIGHTGBM and X_val is not None and y_val is not None:
             self.model.fit(
                 X_train, y_train,
                 eval_set=[(X_val, y_val)],
@@ -214,6 +224,10 @@ class QuantilePriceModel:
             X_val: Validation features
             y_val: Validation target
         """
+        if not HAS_LIGHTGBM:
+            raise ImportError("LightGBM not installed. Quantile regression requires LightGBM. "
+                            "Install with: pip install lightgbm")
+        
         logger.info(f"Training quantile models for {self.quantiles}")
         
         for q in self.quantiles:
