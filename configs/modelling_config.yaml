@@ -1,0 +1,139 @@
+# Renewable Asset Revenue Modelling Configuration
+
+# Data settings
+data:
+  raw_path: data_raw
+  processed_path: data_processed
+  freq: h  # Hourly frequency
+  
+  # Data file names
+  files:
+    prices: prices.csv
+    offshore_wind: offshore_wind.csv
+    onshore_wind: onshore_wind.csv
+    solar: solar.csv
+    demand: demand.csv
+  
+  # Data cleaning
+  cleaning:
+    missing_method: interpolate  # interpolate, forward, backward, drop, zero
+    missing_limit: 3  # Maximum consecutive NaNs to fill
+    remove_outliers: true
+    outlier_method: iqr  # iqr, zscore, percentile
+    outlier_threshold: 3.0
+
+# Asset configuration
+asset:
+  capacity_mw: 100
+  type: offshore_wind  # offshore_wind, onshore_wind, solar
+  
+  # Degradation assumptions
+  annual_degradation: 0.005  # 0.5% per year
+
+# Feature engineering
+features:
+  # Lag features
+  price_lags: [1, 24, 168]  # 1h, 24h, 1 week
+  demand_lags: [24, 168]
+  
+  # Rolling window features
+  rolling_windows: [3, 24, 168]  # 3h, 24h, 1 week
+  rolling_functions: [mean, std]
+  
+  # Feature selection
+  drop_high_correlation: true
+  correlation_threshold: 0.95
+
+# Price modelling
+models:
+  # Train/test split
+  test_size: 0.2
+  val_size: 0.1
+  shuffle: false  # Keep temporal order
+  
+  # Model types to train
+  model_types:
+    - linear
+    - lightgbm
+    # - rf
+    # - gbm
+  
+  # Quantile regression
+  quantiles: [0.1, 0.5, 0.9]
+  
+  # LightGBM parameters
+  lightgbm:
+    num_leaves: 31
+    learning_rate: 0.05
+    feature_fraction: 0.9
+    bagging_fraction: 0.8
+    bagging_freq: 5
+    max_depth: -1
+    min_data_in_leaf: 20
+    verbose: -1
+  
+  # Model saving
+  save_models: true
+  model_save_path: models
+
+# Monte Carlo simulation
+monte_carlo:
+  n_simulations: 1000
+  random_seed: 42
+  
+  # Uncertainty parameters
+  price_volatility: 0.2  # 20% price volatility
+  generation_uncertainty: 0.1  # 10% generation uncertainty
+  
+  # Simulation methods
+  price_method: multiplicative  # multiplicative, additive, percentile
+  generation_method: multiplicative  # multiplicative, seasonal
+
+# Revenue scenarios
+scenarios:
+  # PPA configuration
+  ppa_price: 50  # £/MWh
+  ppa_fraction: 0.5  # 50% of generation under PPA
+  
+  # CfD configuration
+  cfd_strike_price: 55  # £/MWh
+  
+  # Price scenarios
+  price_scenarios:
+    high_gas:
+      gas_price_change: 0.5  # 50% increase
+    low_gas:
+      gas_price_change: -0.3  # 30% decrease
+    high_demand:
+      demand_change: 0.2  # 20% increase
+    low_demand:
+      demand_change: -0.2  # 20% decrease
+    high_res:
+      res_increase: 0.5  # 50% more RES capacity
+    carbon_price_high:
+      carbon_price_gbp_per_tonne: 100
+  
+  # Generation scenarios
+  generation_scenarios:
+    high_wind:
+      uplift: 0.15  # 15% increase
+    low_wind:
+      reduction: 0.15  # 15% decrease
+    p90_cf:
+      target_cf: 0.35
+    p10_cf:
+      target_cf: 0.55
+
+# Output settings
+outputs:
+  reports_path: reports
+  figures_path: reports/figures
+  final_report_path: reports/final_report
+  
+  # Figure formats
+  figure_format: png  # png, pdf, svg
+  figure_dpi: 300
+  
+  # Logging
+  log_level: INFO  # DEBUG, INFO, WARNING, ERROR
+  log_file: logs/modelling.log
